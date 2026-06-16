@@ -1,0 +1,94 @@
+#!/bin/bash
+# skill-stats — query the skill-monitor usage log.
+#
+# Usage:
+#   skill-stats [top]          per-skill total calls (with last-used time)
+#   skill-stats recent [N]     last N invocations (default 20, with source)
+#   skill-stats today          per-skill counts for today
+#   skill-stats project [NAME] per-project counts; with NAME, per-skill within it
+#   skill-stats source         counts by path (tool vs typed)
+#   skill-stats raw            print the resolved log path
+#
+# Log path resolution order:
+#   $SKILL_USAGE_LOG  >  ~/.claude/skill-monitor/.logpath  >  ~/.claude/skill-monitor/skill-usage.jsonl
+set -uo pipefail
+
+resolve_log() {
+  if [ -n "${SKILL_USAGE_LOG:-}" ]; then printf '%s' "$SKILL_USAGE_LOG"; return; fi
+  local ptr="$HOME/.claude/skill-monitor/.logpath"
+  if [ -f "$ptr" ]; then head -n1 "$ptr"; return; fi
+  printf '%s' "$HOME/.claude/skill-monitor/skill-usage.jsonl"
+}
+LOG_FILE="$(resolve_log)"
+
+if [ ! -s "$LOG_FILE" ]; then
+  echo "No usage log yet: $LOG_FILE"
+  echo "(Invoke a skill once and records start accumulating — after installing the plugin in a new session.)"
+  exit 0
+fi
+
+cmd="${1:-top}"
+case "$cmd" in
+  top)
+    TOTAL=$(wc -l < "$LOG_FILE" | tr -d ' ')
+    echo "Total: ${TOTAL} calls  |  log: $LOG_FILE"
+    echo
+    { printf 'COUNT\tSKILL\tLAST_USED\n'
+      jq -s -r '
+        group_by(.skill)
+        | map({skill: .[0].skill, count: length, last: (max_by(.epoch).ts)})
+        | sort_by(.count) | reverse | .[]
+        | "\(.count)\t\(.skill)\t\(.last)"
+      ' "$LOG_FILE"
+    } | column -t -s $'\t'
+    ;;
+  recent)
+    N="${2:-20}"
+    { printf 'TIME\tSKILL\tSRC\tARGS\tPROJECT\n'
+      tail -n "$N" "$LOG_FILE" | jq -r '
+        (.args // "" | gsub("\n"; " ") | .[0:40]) as $a
+        | "\(.ts)\t\(.skill)\t\(.source // "-")\t\(if $a == "" then "-" else $a end)\t\(.project)"
+      '
+    } | column -t -s $'\t'
+    ;;
+  today)
+    TODAY=$(date +%Y-%m-%d)
+    echo "Today (${TODAY}):"
+    echo
+    { printf 'COUNT\tSKILL\n'
+      jq -r --arg d "$TODAY" 'select(.ts | startswith($d)) | .skill' "$LOG_FILE" \
+        | sort | uniq -c | sort -rn | awk '{printf "%s\t%s\n", $1, $2}'
+    } | column -t -s $'\t'
+    ;;
+  project)
+    NAME="${2:-}"
+    if [ -n "$NAME" ]; then
+      echo "Skills in project '${NAME}':"; echo
+      { printf 'COUNT\tSKILL\n'
+        jq -r --arg p "$NAME" 'select(.project == $p) | .skill' "$LOG_FILE" \
+          | sort | uniq -c | sort -rn | awk '{printf "%s\t%s\n", $1, $2}'
+      } | column -t -s $'\t'
+    else
+      echo "Calls per project:"; echo
+      { printf 'COUNT\tPROJECT\n'
+        jq -r '.project' "$LOG_FILE" | sort | uniq -c | sort -rn \
+          | awk '{printf "%s\t%s\n", $1, $2}'
+      } | column -t -s $'\t'
+    fi
+    ;;
+  source)
+    echo "By source (tool vs typed):"; echo
+    { printf 'COUNT\tSOURCE\n'
+      jq -r '.source // "-"' "$LOG_FILE" | sort | uniq -c | sort -rn \
+        | awk '{printf "%s\t%s\n", $1, $2}'
+    } | column -t -s $'\t'
+    ;;
+  raw)
+    printf '%s\n' "$LOG_FILE"
+    ;;
+  *)
+    echo "Unknown command: $cmd"
+    echo "Usage: skill-stats [top|recent N|today|project [NAME]|source|raw]"
+    exit 1
+    ;;
+esac

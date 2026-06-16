@@ -1,0 +1,17 @@
+{
+  "name": "skill-monitor",
+  "owner": {
+    "name": "yokihara"
+  },
+  "metadata": {
+    "description": "Marketplace hosting the skill-monitor plugin."
+  },
+  "plugins": [
+    {
+      "name": "skill-monitor",
+      "source": "./plugins/skill-monitor",
+      "description": "Track which Claude Code skills you use, how often, and where — local JSONL log + skill-stats CLI.",
+      "version": "0.1.0"
+    }
+  ]
+}
