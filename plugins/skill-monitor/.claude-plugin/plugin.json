@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "description": "Track and monitor Claude Code skill (slash command) usage via hooks. Local-only JSONL log plus a skill-stats CLI for per-skill counts, recents, and per-project breakdowns.",
   "author": {
-    "name": "skill-monitor contributors"
+    "name": "yokihara"
   },
   "homepage": "https://github.com/yokihara/skill-monitor",
+  "repository": "https://github.com/yokihara/skill-monitor",
   "license": "MIT",
   "keywords": [
     "claude-code",
