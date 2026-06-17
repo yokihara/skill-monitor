@@ -68,7 +68,20 @@ claude plugin validate /absolute/path/to/skill-monitor
 
 ## Usage
 
-The CLI ships at `bin/skill-stats` inside the plugin. Locate it and alias it in your shell rc:
+### Inside Claude Code (slash command)
+
+After installing, type the slash command right in Claude Code:
+
+```
+/skill-monitor:skill-stats            # per-skill totals
+/skill-monitor:skill-stats recent 20  # last 20 invocations
+/skill-monitor:skill-stats today      # today's usage
+/skill-monitor:skill-stats source     # tool vs typed
+```
+
+### From your terminal (CLI)
+
+The CLI also ships at `bin/skill-stats` inside the plugin. Locate it and alias it in your shell rc:
 
 ```
 find ~/.claude/plugins -name skill-stats -path '*skill-monitor*'   # locate it
