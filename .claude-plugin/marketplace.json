@@ -11,7 +11,7 @@
       "name": "skill-monitor",
       "source": "./plugins/skill-monitor",
       "description": "Track which Claude Code skills you use, how often, and where — local JSONL log + skill-stats CLI.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   ]
 }
